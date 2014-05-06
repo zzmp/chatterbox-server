@@ -12,10 +12,10 @@ function waitForThen(test, cb) {
 }
 
 describe('Node Server Request Listener Function', function() {
-  it('Should answer GET requests for /classes/room with a 200 status code', function() {
+  it('Should answer GET requests for /chatterbox/room with a 200 status code', function() {
     // This is a fake server request. Normally, the server would provide this,
     // but we want to test our function's behavior totally independent of the server code
-    var req = new stubs.request('/classes/room1', 'GET');
+    var req = new stubs.request('/chatterbox', 'GET');
     var res = new stubs.response();
 
     handler.handler(req, res);
@@ -25,7 +25,7 @@ describe('Node Server Request Listener Function', function() {
   });
 
   it('Should send back parsable stringified JSON', function() {
-    var req = new stubs.request('/classes/room1', 'GET');
+    var req = new stubs.request('/chatterbox', 'GET');
     var res = new stubs.response();
 
     handler.handler(req, res);
@@ -35,7 +35,7 @@ describe('Node Server Request Listener Function', function() {
   });
 
   it('Should send back an object', function() {
-    var req = new stubs.request('/classes/room1', 'GET');
+    var req = new stubs.request('/chatterbox', 'GET');
     var res = new stubs.response();
 
     handler.handler(req, res);
@@ -46,7 +46,7 @@ describe('Node Server Request Listener Function', function() {
   });
 
   it('Should send an object containing a `results` array', function() {
-    var req = new stubs.request('/classes/room1', 'GET');
+    var req = new stubs.request('/chatterbox', 'GET');
     var res = new stubs.response();
 
     handler.handler(req, res);
@@ -57,12 +57,12 @@ describe('Node Server Request Listener Function', function() {
     expect(res._ended).to.equal(true);
   });
 
-  it('Should accept posts to /classes/room', function() {
+  it('Should accept posts to /chatterbox', function() {
     var stubMsg = {
       username: 'Jono',
       message: 'Do my bidding!'
     };
-    var req = new stubs.request('/classes/room1', 'POST', stubMsg);
+    var req = new stubs.request('/chatterbox', 'POST', stubMsg);
     var res = new stubs.response();
 
     handler.handler(req, res);
@@ -81,7 +81,7 @@ it('Should respond with messages that were previously posted', function() {
       username: 'Jono',
       message: 'Do my bidding!'
     };
-    var req = new stubs.request('/classes/room1', 'POST', stubMsg);
+    var req = new stubs.request('/chatterbox', 'POST', stubMsg);
     var res = new stubs.response();
 
     handler.handler(req, res);
@@ -89,7 +89,7 @@ it('Should respond with messages that were previously posted', function() {
     expect(res._responseCode).to.equal(201);
 
     // Now if we request the log for that room the message we posted should be there:
-    req = new stubs.request('/classes/room1', 'GET');
+    req = new stubs.request('/chatterbox', 'GET');
     res = new stubs.response();
 
     handler.handler(req, res);

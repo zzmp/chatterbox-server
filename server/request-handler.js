@@ -1,35 +1,106 @@
-/* You should implement your request handler function in this file.
- * And hey! This is already getting passed to http.createServer()
- * in basic-server.js. But it won't work as is.
- * You'll have to figure out a way to export this function from
- * this file and include it in basic-server.js so that it actually works.
- * *Hint* Check out the node module documentation at http://nodejs.org/api/modules.html. */
+var read = require('fs').readFile;
+var ext = require('path').extname;
+var cache = {};
+
+cache.chatterbox = [];
 
 var handleRequest = function(request, response) {
-  /* the 'request' argument comes from nodes http module. It includes info about the
-  request - such as what URL the browser is requesting. */
-
-  /* Documentation for both request and response can be found at
-   * http://nodemanual.org/0.8.14/nodejs_ref_guide/http.html */
 
   console.log("Serving request type " + request.method + " for url " + request.url);
 
-  var statusCode = 200;
+  var question = request.url.indexOf('?');
+  var url = (question === -1) ? request.url : request.url.substr(0, question);
+  var options = request.url.substr(question).split('&');
+  url = (url === '/') ? '/index.html' : url;
+  var isFile = ext(url).length;
 
-  /* Without this line, this server wouldn't work. See the note
-   * below about CORS. */
+  switch (request.method) {
+    case 'GET':
+      isFile ? getFile(url, ext(url), response) : getObject(url, response, options);
+      return;
+    case 'OPTIONS':
+      response.writeHead(200, defaultCorsHeaders);
+      response.end();
+      return;
+    case 'POST':
+      if (!isFile) {
+        postObject(request, response, options);
+        return;
+      }
+  }
+
+  response.writeHead(500, defaultCorsHeaders);
+  response.end();
+};
+
+var getFile = function(url, ext, response, options) {
+  read('client' + url, function(err, data) {
+    if (err) {
+      response.writeHead(404, defaultCorsHeaders);
+      response.end();
+    } else {
+      var contentType = {
+        '.html': 'text/html',
+        '.css': 'text/css',
+        '.js': 'text/javascript'
+      };
+
+      var headers = defaultCorsHeaders;
+      headers['Content-Type'] = contentType[ext];
+      console.log(ext, contentType[ext]);
+
+      response.writeHead(200, headers);
+      response.end(data);
+    }
+  });
+};
+
+var getObject = function(url, response, options) {
+
+  var key = url.substr(1);
+  var array = cache[key];
+
   var headers = defaultCorsHeaders;
 
-  headers['Content-Type'] = "text/plain";
+  if (array === undefined) {
+    response.writeHead(404, headers);
+    response.end();
+    return;
+  }
 
-  /* .writeHead() tells our server what HTTP status code to send back */
-  response.writeHead(statusCode, headers);
+  headers['Content-Type'] = 'application/json';
 
-  /* Make sure to always call response.end() - Node will not send
-   * anything back to the client until you do. The string you pass to
-   * response.end() will be the body of the response - i.e. what shows
-   * up in the browser.*/
-  response.end("Hello, World!");
+  response.writeHead(200, headers);
+  response.end(JSON.stringify({results: array}));
+};
+
+var postObject = function(request, response, options) {
+  var message = '';
+
+  request.on('data', function(data) {
+    message += data;
+  });
+  request.on('end', function() {
+    message = JSON.parse(message);
+    var createdAt = (new Date()).toISOString();
+    var updatedAt = (new Date()).toISOString();
+    message.createdAt = createdAt;
+    message.updatedAt = updatedAt;
+
+    var key = request.url.substr(1);
+    var array = cache[key] || (cache[key] = []);
+
+    array.push(message);
+
+    var headers = defaultCorsHeaders;
+    headers['Content-Type'] = 'application/json';
+
+    response.writeHead(201, headers);
+    response.end(JSON.stringify({
+      createdAt: createdAt,
+      updatedAt: updatedAt
+    }));
+  });
 };
 
 /* These headers will allow Cross-Origin Resource Sharing (CORS).
@@ -42,4 +113,9 @@ var defaultCorsHeaders = {
   "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
   "access-control-allow-headers": "content-type, accept",
   "access-control-max-age": 10 // Seconds.
+};
+
+module.exports = {
+  handleRequest: handleRequest,
+  handler: handleRequest
 };
